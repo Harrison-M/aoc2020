@@ -22,19 +22,30 @@ fn process_pattern<'a>(lines: impl Iterator<Item=&'a str>) -> TreePattern {
     TreePattern { tree_index_rows, row_width }
 }
 
-/// Going right three and down 1, find the number of trees on the way to the bottom
-fn part1(pattern: &TreePattern) -> usize {
+/// Count the number of trees hit on a given bearing
+fn check_slope(pattern: &TreePattern, horizontal: usize, vertical: usize) -> usize {
     let mut column: usize = 0;
     let mut trees: usize = 0;
 
-    for row in pattern.tree_index_rows.iter() {
+    for row in pattern.tree_index_rows.iter().step_by(vertical) {
         if row.contains(&(column % pattern.row_width)) {
             trees += 1;
         }
-        column += 3;
+        column += horizontal;
     }
 
     trees
+}
+
+/// Going right three and down 1, find the number of trees on the way to the bottom
+fn part1(pattern: &TreePattern) -> usize {
+    check_slope(pattern, 3, 1)
+}
+
+fn part2(pattern: &TreePattern) -> usize {
+    vec![(1, 1), (3, 1), (5, 1), (7, 1), (1, 2)]
+        .into_iter()
+        .fold(1, |acc, (h, v)| acc * check_slope(pattern, h, v))
 }
 
 fn main() {
@@ -45,6 +56,7 @@ fn main() {
     let pattern = process_pattern(contents.lines());
 
     println!("Part 1: {}", part1(&pattern));
+    println!("Part 2: {}", part2(&pattern));
 }
 
 #[cfg(test)]
@@ -69,5 +81,25 @@ mod tests {
 
         let pattern = process_pattern(sample.into_iter());
         assert_eq!(part1(&pattern), 7);
+    }
+
+    #[test]
+    fn part2_example() {
+        let sample = vec![
+            "..##.......",
+            "#...#...#..",
+            ".#....#..#.",
+            "..#.#...#.#",
+            ".#...##..#.",
+            "..#.##.....",
+            ".#.#.#....#",
+            ".#........#",
+            "#.##...#...",
+            "#...##....#",
+            ".#..#...#.#",
+        ];
+
+        let pattern = process_pattern(sample.into_iter());
+        assert_eq!(part2(&pattern), 336);
     }
 }
