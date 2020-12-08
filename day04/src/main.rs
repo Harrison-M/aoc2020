@@ -1,10 +1,13 @@
 use regex::Regex;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
 
-const SPLIT_RE_STR: &str = r"\n\n";
+const COLOR_RE_STR: &str = r"^#[0-9a-f]{6}$";
 const DATA_RE_STR: &str = r"(\w+):(\S+)";
+const HEIGHT_RE_STR: &str = r"^(\d+)(cm|in)$";
+const PASSPORT_RE_STR: &str = r"^\d{9}$";
+const SPLIT_RE_STR: &str = r"\n\n";
 
 type Profiles<'a> = Vec<HashMap<&'a str, &'a str>>;
 
@@ -36,6 +39,52 @@ fn part1(profiles: &Profiles) -> usize {
     ).count()
 }
 
+fn part2(profiles: &Profiles) -> usize {
+    let height_re = Regex::new(HEIGHT_RE_STR).unwrap();
+    let color_re = Regex::new(COLOR_RE_STR).unwrap();
+    let passport_re = Regex::new(PASSPORT_RE_STR).unwrap();
+    let mut valid_eye_colors: HashSet<&str> = HashSet::new();
+    for color in vec![
+        "amb",
+        "blu",
+        "brn",
+        "gry",
+        "grn",
+        "hzl",
+        "oth",
+    ].into_iter() {
+        valid_eye_colors.insert(color);
+    }
+
+    profiles.iter().filter(|profile| {
+        profile.get("byr").map_or(false, |sval| sval.parse::<usize>()
+            .map_or(false, |val| val >= 1920 && val <= 2002)
+        ) &&
+        profile.get("iyr").map_or(false, |sval| sval.parse::<usize>()
+            .map_or(false, |val| val >= 2010 && val <= 2020)
+        ) &&
+        profile.get("eyr").map_or(false, |sval| sval.parse::<usize>()
+            .map_or(false, |val| val >= 2020 && val <= 2030)
+        ) &&
+        profile.get("hgt").map_or(false, |sval| height_re.captures(sval)
+            .map_or(false, |captures| captures.get(2)
+                .map_or(false, |unit| captures.get(1)
+                    .map_or(false, |num_s| num_s.as_str().parse::<usize>()
+                        .map_or(false, |num| match unit.as_str() {
+                            "cm" => num >= 150 && num <= 193,
+                            "in" => num >= 59 && num <= 76,
+                            _ => panic!("Regex should have missed"),
+                        })
+                    )
+                )
+            )
+        ) &&
+        profile.get("hcl").map_or(false, |hcl| color_re.is_match(hcl)) &&
+        profile.get("ecl").map_or(false, |sval| valid_eye_colors.contains(sval)) &&
+        profile.get("pid").map_or(false, |pid| passport_re.is_match(pid))
+    }).count()
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let filename = &args[1];
@@ -44,6 +93,7 @@ fn main() {
     let profiles = get_profiles(&contents);
 
     println!("Part 1: {}", part1(&profiles));
+    println!("Part 2: {}", part2(&profiles));
 }
 
 #[cfg(test)]
@@ -54,7 +104,13 @@ mod tests {
     fn part1_example() {
         let database = include_str!("sample").to_string();
         let profiles = get_profiles(&database);
-        println!("{:#?}", profiles);
         assert_eq!(part1(&profiles), 2);
+    }
+
+    #[test]
+    fn part2_example() {
+        let database = include_str!("sample2").to_string();
+        let profiles = get_profiles(&database);
+        assert_eq!(part2(&profiles), 4);
     }
 }
