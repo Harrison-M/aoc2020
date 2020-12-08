@@ -61,13 +61,17 @@ fn part2(profiles: &Profiles) -> usize {
     }
 
     profiles.iter().filter(|profile| {
-        profile.get("byr").and_then(opt_parse)
+        profile.get("byr")
+            .and_then(opt_parse)
             .map_or(false, |val| val >= 1920 && val <= 2002) &&
-        profile.get("iyr").and_then(opt_parse)
+        profile.get("iyr")
+            .and_then(opt_parse)
             .map_or(false, |val| val >= 2010 && val <= 2020) &&
-        profile.get("eyr").and_then(opt_parse)
+        profile.get("eyr")
+            .and_then(opt_parse)
             .map_or(false, |val| val >= 2020 && val <= 2030) &&
-        profile.get("hgt").and_then(|sval| height_re.captures(sval))
+        profile.get("hgt")
+            .and_then(|sval| height_re.captures(sval))
             .and_then(|captures| captures.get(2).zip(captures.get(1)))
             .and_then(|(unit, num_s)| opt_parse(&num_s.as_str())
                 .map(|num| match unit.as_str() {
@@ -76,9 +80,12 @@ fn part2(profiles: &Profiles) -> usize {
                     _ => panic!("Regex should have missed"),
                 })
             ).unwrap_or(false) &&
-        profile.get("hcl").map_or(false, |hcl| color_re.is_match(hcl)) &&
-        profile.get("ecl").map_or(false, |sval| valid_eye_colors.contains(sval)) &&
-        profile.get("pid").map_or(false, |pid| passport_re.is_match(pid))
+        profile.get("hcl")
+            .map_or(false, |hcl| color_re.is_match(hcl)) &&
+        profile.get("ecl")
+            .map_or(false, |sval| valid_eye_colors.contains(sval)) &&
+        profile.get("pid")
+            .map_or(false, |pid| passport_re.is_match(pid))
     }).count()
 }
 
