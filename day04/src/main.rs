@@ -73,12 +73,13 @@ fn part2(profiles: &Profiles) -> usize {
         profile.get("hgt")
             .and_then(|sval| height_re.captures(sval))
             .and_then(|captures| captures.get(2).zip(captures.get(1)))
-            .and_then(|(unit, num_s)| opt_parse(&num_s.as_str())
-                .map(|num| match unit.as_str() {
-                    "cm" => num >= 150 && num <= 193,
-                    "in" => num >= 59 && num <= 76,
-                    _ => panic!("Regex should have missed"),
-                })
+            .and_then(|(unit, num_s)|
+                opt_parse(&num_s.as_str())
+                    .map(|num| match unit.as_str() {
+                        "cm" => num >= 150 && num <= 193,
+                        "in" => num >= 59 && num <= 76,
+                        _ => panic!("Regex should have missed"),
+                    })
             ).unwrap_or(false) &&
         profile.get("hcl")
             .map_or(false, |hcl| color_re.is_match(hcl)) &&
