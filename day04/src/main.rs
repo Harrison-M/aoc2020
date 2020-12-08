@@ -39,6 +39,10 @@ fn part1(profiles: &Profiles) -> usize {
     ).count()
 }
 
+fn opt_parse(num_s: &&str) -> Option<usize> {
+    num_s.parse().map_or(None, |num| Some(num))
+}
+
 fn part2(profiles: &Profiles) -> usize {
     let height_re = Regex::new(HEIGHT_RE_STR).unwrap();
     let color_re = Regex::new(COLOR_RE_STR).unwrap();
@@ -57,28 +61,21 @@ fn part2(profiles: &Profiles) -> usize {
     }
 
     profiles.iter().filter(|profile| {
-        profile.get("byr").map_or(false, |sval| sval.parse::<usize>()
-            .map_or(false, |val| val >= 1920 && val <= 2002)
-        ) &&
-        profile.get("iyr").map_or(false, |sval| sval.parse::<usize>()
-            .map_or(false, |val| val >= 2010 && val <= 2020)
-        ) &&
-        profile.get("eyr").map_or(false, |sval| sval.parse::<usize>()
-            .map_or(false, |val| val >= 2020 && val <= 2030)
-        ) &&
-        profile.get("hgt").map_or(false, |sval| height_re.captures(sval)
-            .map_or(false, |captures| captures.get(2)
-                .map_or(false, |unit| captures.get(1)
-                    .map_or(false, |num_s| num_s.as_str().parse::<usize>()
-                        .map_or(false, |num| match unit.as_str() {
-                            "cm" => num >= 150 && num <= 193,
-                            "in" => num >= 59 && num <= 76,
-                            _ => panic!("Regex should have missed"),
-                        })
-                    )
-                )
-            )
-        ) &&
+        profile.get("byr").and_then(opt_parse)
+            .map_or(false, |val| val >= 1920 && val <= 2002) &&
+        profile.get("iyr").and_then(opt_parse)
+            .map_or(false, |val| val >= 2010 && val <= 2020) &&
+        profile.get("eyr").and_then(opt_parse)
+            .map_or(false, |val| val >= 2020 && val <= 2030) &&
+        profile.get("hgt").and_then(|sval| height_re.captures(sval))
+            .and_then(|captures| captures.get(2).zip(captures.get(1)))
+            .and_then(|(unit, num_s)| opt_parse(&num_s.as_str())
+                .map(|num| match unit.as_str() {
+                    "cm" => num >= 150 && num <= 193,
+                    "in" => num >= 59 && num <= 76,
+                    _ => panic!("Regex should have missed"),
+                })
+            ).unwrap_or(false) &&
         profile.get("hcl").map_or(false, |hcl| color_re.is_match(hcl)) &&
         profile.get("ecl").map_or(false, |sval| valid_eye_colors.contains(sval)) &&
         profile.get("pid").map_or(false, |pid| passport_re.is_match(pid))
