@@ -54,12 +54,31 @@ fn part1<'a>(seats: impl Iterator<Item=&'a str>) -> usize {
         .unwrap()
 }
 
+fn part2<'a>(seats: impl Iterator<Item=&'a str>) -> usize {
+    let mut seat_ids: Vec<usize> = seats
+        .map(seat_position_from_string)
+        .map(seat_id_from_position)
+        .collect();
+
+    seat_ids.sort_unstable();
+
+    seat_ids.windows(2)
+        .find_map(|window| {
+            if window[1] - window[0] == 2{
+                Some(window[1] - 1)
+            } else {
+                None
+            }
+        }).expect("404 seat not found")
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let filename = &args[1];
 
     let contents = fs::read_to_string(filename).expect("Error opening file");
     println!("Part 1: {}", part1(contents.lines()));
+    println!("Part 2: {}", part2(contents.lines()));
 }
 
 #[cfg(test)]
