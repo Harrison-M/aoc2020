@@ -7,19 +7,21 @@ const CONTAINED_RE_STR: &str = r"(?P<quantity>\d+) (?P<color>.+?) bag";
 const CONTAINER_RE_STR: &str = r"^(?P<color>.+?) bags";
 
 #[derive(Clone, Copy)]
-struct ParentRelationship<'a> {
+struct BagRelationship<'a> {
     color: &'a str,
     quantity: usize,
 }
 
-type ChildParentsMap<'a> = HashMap<&'a str, Vec<ParentRelationship<'a>>>;
+type BagMap<'a> = HashMap<&'a str, Vec<BagRelationship<'a>>>;
 
+/// Get a map of bags to the bags containing them, with counts of how many of this bag go into
+/// them
 fn generate_child_parents_map<'a>(specs: impl Iterator<Item=&'a str>)
-    -> ChildParentsMap<'a> {
+    -> BagMap<'a> {
     let contained_re = Regex::new(CONTAINED_RE_STR).unwrap();
     let container_re = Regex::new(CONTAINER_RE_STR).unwrap();
 
-    let mut child_parents_map: ChildParentsMap<'a> = HashMap::new();
+    let mut child_parents_map: BagMap<'a> = HashMap::new();
 
     for spec in specs {
         let parent = container_re
@@ -35,7 +37,7 @@ fn generate_child_parents_map<'a>(specs: impl Iterator<Item=&'a str>)
                 .and_then(|q| q.as_str().parse().ok())
                 .unwrap();
 
-            let relationship = ParentRelationship {
+            let relationship = BagRelationship {
                     color: parent,
                     quantity,
             };
@@ -49,7 +51,35 @@ fn generate_child_parents_map<'a>(specs: impl Iterator<Item=&'a str>)
     child_parents_map
 }
 
-fn ancestors<'a>(map: &ChildParentsMap<'a>, color: &'a str) -> HashSet<&'a str> {
+/// Get a map of bags to the bags they contain and how many of each
+fn generate_parent_children_map<'a>(specs: impl Iterator<Item=&'a str>)
+    -> BagMap<'a> {
+    let contained_re = Regex::new(CONTAINED_RE_STR).unwrap();
+    let container_re = Regex::new(CONTAINER_RE_STR).unwrap();
+
+    specs.map(|spec| {
+        let parent = container_re
+            .captures(spec)
+            .and_then(|c| c.name("color"))
+            .unwrap()
+            .as_str();
+
+        let children: Vec<BagRelationship<'a>> = contained_re
+            .captures_iter(spec)
+            .map(|caps| BagRelationship {
+                color: caps.name("color").unwrap().as_str(),
+                quantity: caps
+                    .name("quantity")
+                    .and_then(|q| q.as_str().parse().ok())
+                    .unwrap()
+            }).collect();
+
+        (parent, children)
+    }).collect()
+}
+
+/// Get a set of the bags that can contain this bag
+fn ancestors<'a>(map: &BagMap<'a>, color: &'a str) -> HashSet<&'a str> {
     match map.get(color) {
         None => HashSet::new(),
         Some(parents) => {
@@ -68,8 +98,21 @@ fn ancestors<'a>(map: &ChildParentsMap<'a>, color: &'a str) -> HashSet<&'a str> 
     }
 }
 
-fn part1(map: &ChildParentsMap) -> usize {
+/// Count the number of bags that have to be in a given bag color
+fn child_count<'a>(map: &BagMap<'a>, color: &'a str) -> usize {
+    map.get(color).map(|children| {
+        children.iter().fold(0, |acc, child| {
+            acc + child.quantity + child.quantity * child_count(map, child.color)
+        })
+    }).unwrap_or_default() // 0 if color is not in map
+}
+
+fn part1(map: &BagMap) -> usize {
     ancestors(map, "shiny gold").len()
+}
+
+fn part2(map: &BagMap) -> usize {
+    child_count(map, "shiny gold")
 }
 
 fn main() {
@@ -77,9 +120,12 @@ fn main() {
     let filename = &args[1];
 
     let contents = fs::read_to_string(filename).expect("Error opening file");
-    let map = generate_child_parents_map(contents.lines());
+    let child_parent_map = generate_child_parents_map(contents.lines());
 
-    println!("Part 1: {}", part1(&map));
+    println!("Part 1: {}", part1(&child_parent_map));
+
+    let parent_child_map = generate_parent_children_map(contents.lines());
+    println!("Part 2: {}", part2(&parent_child_map));
 }
 
 #[cfg(test)]
@@ -92,5 +138,17 @@ mod tests {
     fn part1_example() {
         let map = generate_child_parents_map(SAMPLE.lines());
         assert_eq!(part1(&map), 4);
+    }
+
+    #[test]
+    fn part2_example1() {
+        let map = generate_parent_children_map(SAMPLE.lines());
+        assert_eq!(part2(&map), 32);
+    }
+
+    #[test]
+    fn part2_example2() {
+        let map = generate_parent_children_map(include_str!("sample2").lines());
+        assert_eq!(part2(&map), 126)
     }
 }
