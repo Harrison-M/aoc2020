@@ -1,4 +1,4 @@
-// This one's a bit too clever for its own good, but it was a fun exercise
+// Part 1 of this is a bit too clever for its own good, but it was a fun exercise
 // in trying out and practicing smart pointers.
 use std::{
     collections::{HashSet, HashMap},
@@ -83,13 +83,46 @@ fn part1(numbers: &Vec<usize>, window: usize) -> usize {
         .unwrap()
 }
 
+fn part2(numbers: &Vec<usize>, target: usize) -> usize {
+    let mut index = 0usize;
+
+    loop {
+        if index >= numbers.len() {
+            panic!("Failed to find encryption weakness");
+        }
+        let mut acc = 0usize;
+        let candidates: Vec<usize> = numbers
+            .iter()
+            .skip(index)
+            .take_while(|num| {
+                // More side effects!!
+                if acc >= target {
+                    false
+                } else {
+                    acc += *num;
+                    true
+                }
+            })
+            .copied()
+            .collect();
+
+        if acc == target {
+            break candidates.iter().min().unwrap() + candidates.iter().max().unwrap();
+        }
+
+        index += 1;
+    }
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let filename = &args[1];
 
     let contents = fs::read_to_string(filename).expect("Error opening file");
     let numbers: Vec<usize> = contents.lines().map(|l| l.parse().unwrap()).collect();
-    println!("Part 1: {}", part1(&numbers, 25));
+    let answer1 = part1(&numbers, 25);
+    println!("Part 1: {}", answer1);
+    println!("Part 2: {}", part2(&numbers, answer1));
 }
 
 #[cfg(test)]
@@ -104,5 +137,15 @@ mod tests {
         ];
 
         assert_eq!(part1(&sample, 5), 127);
+    }
+
+    #[test]
+    fn part2_example() {
+        let sample = vec![
+            35, 20, 15, 25, 47, 40, 62, 55, 65, 95, 102,
+            117, 150, 182, 127, 219, 299, 277, 309, 576,
+        ];
+
+        assert_eq!(part2(&sample, 127), 62);
     }
 }
