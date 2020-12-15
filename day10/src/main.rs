@@ -28,7 +28,8 @@ fn part1(adapters: &Vec<usize>) -> usize {
             + 1) // Include the device
 }
 
-// TODO: try just multiplying the diffs
+/// Checks number of valid chains for a given list of adapters, storing results against the
+/// value of the first adapter in memos to reduce iteration
 fn adapter_possibilities(adapters: &[usize], memos: &mut HashMap<usize, usize>) -> usize {
     match adapters.split_first() {
         Some((&first, rest)) => {
