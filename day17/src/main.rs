@@ -15,7 +15,7 @@ struct ConwayField<T: Eq + Hash + Relative> {
 }
 
 fn cached_get_adjacent<'a, T>(adjacency_map: &'a mut AdjacencyCache<T>, cell: &T) -> &'a Vec<T> 
-    where T: Copy + Eq + Hash + Relative{
+    where T: Copy + Eq + Hash + Relative {
     adjacency_map.entry(*cell)
         .or_insert_with(|| cell.adjacent())
 }
