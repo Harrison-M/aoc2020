@@ -1,58 +1,28 @@
-use itertools::iproduct;
-use std::{collections::{HashSet, HashMap}, env, fs, ops::Add};
+mod cell;
+mod hypercell;
+mod relative;
 
-type CellTuple = (isize, isize, isize);
+use crate::cell::Cell;
+use crate::hypercell::HyperCell;
+use crate::relative::Relative;
+use std::{collections::{HashSet, HashMap}, env, fs, hash::Hash};
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-struct Cell(isize, isize, isize);
+type AdjacencyCache<T> = HashMap<T, Vec<T>>;
 
-impl Cell {
-    fn adjacent(&self) -> Vec<Cell> {
-        iproduct!(-1isize..=1, -1isize..=1, -1isize..=1)
-            .filter(|ct| *ct != (0, 0, 0))
-            .map(|ct| *self + ct)
-            .collect()
-    }
+struct ConwayField<T: Eq + Hash + Relative> {
+    adjacency_map: AdjacencyCache<T>,
+    active_cells: HashSet<T>,
 }
 
-impl From<CellTuple> for Cell {
-    fn from((x, y, z): (isize, isize, isize)) -> Self {
-        Self(x, y, z)
-    }
-}
-
-impl Add for Cell {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        Cell(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
-    }
-}
-
-impl Add<CellTuple> for Cell {
-    type Output = Self;
-
-    fn add(self, rhs: CellTuple) -> Self::Output {
-        Cell(self.0 + rhs.0, self.1 + rhs.1, self.2 + rhs.2)
-    }
-}
-
-type AdjacencyCache = HashMap<Cell, Vec<Cell>>;
-
-struct ConwayField {
-    adjacency_map: AdjacencyCache,
-    active_cells: HashSet<Cell>,
-}
-
-fn cached_get_adjacent<'a>(adjacency_map: &'a mut AdjacencyCache, cell: &Cell)
-    -> &'a Vec<Cell> {
+fn cached_get_adjacent<'a, T>(adjacency_map: &'a mut AdjacencyCache<T>, cell: &T) -> &'a Vec<T> 
+    where T: Copy + Eq + Hash + Relative{
     adjacency_map.entry(*cell)
         .or_insert_with(|| cell.adjacent())
 }
 
-impl ConwayField {
+impl<T: Copy + Eq + Hash + Relative> ConwayField<T> {
     fn step(&mut self) {
-        let mut adjacency_counts: HashMap<Cell, u8> = HashMap::new();
+        let mut adjacency_counts: HashMap<T, u8> = HashMap::new();
         for active_cell in self.active_cells.iter() {
             for adjacent_cell in cached_get_adjacent(&mut self.adjacency_map, active_cell) {
                 adjacency_counts.entry(*adjacent_cell)
@@ -73,7 +43,8 @@ impl ConwayField {
     }
 }
 
-impl From<&str> for ConwayField {
+impl<T> From<&str> for ConwayField<T>
+    where T: Eq + From<(isize, isize)> + Hash + Relative {
     fn from(grid: &str) -> Self {
         let active_cubes = grid
             .lines()
@@ -83,14 +54,23 @@ impl From<&str> for ConwayField {
                     .chars()
                     .enumerate()
                     .filter(|(_, c)| *c == '#')
-                    .map(move |(x, _)| Cell(x as isize, y as isize, 0))
+                    .map(move |(x, _)| (x as isize, y as isize).into())
             ).collect();
         Self { adjacency_map: HashMap::new(), active_cells: active_cubes }
     }
 }
 
 fn part1(input: &'_ str) -> usize {
-    let mut field: ConwayField = input.into();
+    let mut field: ConwayField<Cell> = input.into();
+    for _ in 0..6 {
+        field.step();
+    }
+
+    field.active_cells.len()
+}
+
+fn part2(input: &'_ str) -> usize {
+    let mut field: ConwayField<HyperCell> = input.into();
     for _ in 0..6 {
         field.step();
     }
@@ -104,6 +84,7 @@ fn main() {
 
     let contents = fs::read_to_string(filename).expect("Error opening file");
     println!("Part 1: {}", part1(&contents));
+    println!("Part 2: {}", part2(&contents));
 }
 
 #[cfg(test)]
@@ -115,5 +96,10 @@ mod test {
     #[test]
     fn part1_example() {
         assert_eq!(part1(SAMPLE), 112);
+    }
+
+    #[test]
+    fn part2_example() {
+        assert_eq!(part2(SAMPLE), 848);
     }
 }
