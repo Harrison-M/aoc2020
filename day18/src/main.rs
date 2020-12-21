@@ -4,7 +4,7 @@ struct TokensFromEnd<'a> {
     split: Vec<&'a str>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 enum Token {
     Number(usize),
     Operator(char),
@@ -70,10 +70,35 @@ fn calculate(token_stack: &mut Vec<Token>) -> usize {
     acc
 }
 
+fn calculate_with_precedence(token_stack: &mut Vec<Token>) -> usize {
+    let mut acc = 0;
+    while let Some(token) = token_stack.pop() {
+        match token {
+            Number(num) => acc += num,
+            Operator('*') => {
+                acc *= calculate_with_precedence(token_stack);
+                break;
+            },
+            Operator('+') => {},
+            Operator(op) => panic!("Unexpected operator {}", op),
+            OpenParen => acc += calculate_with_precedence(token_stack),
+            CloseParen => break,
+        };
+    }
+    acc
+}
+
 fn part1(mut token_stacks: Vec<Vec<Token>>) -> usize {
     token_stacks
         .iter_mut()
         .map(|token_stack| calculate(token_stack))
+        .sum()
+}
+
+fn part2(mut token_stacks: Vec<Vec<Token>>) -> usize {
+    token_stacks
+        .iter_mut()
+        .map(|token_stack| calculate_with_precedence(token_stack))
         .sum()
 }
 
@@ -89,7 +114,9 @@ fn main() {
             token_iter.collect()
         })
         .collect();
-    println!("Part 1: {}", part1(token_stacks));
+
+    println!("Part 1: {}", part1(token_stacks.clone()));
+    println!("Part 2: {}", part2(token_stacks));
 }
 
 #[cfg(test)]
@@ -119,5 +146,31 @@ mod test {
             .collect();
 
         assert_eq!(part1(token_stacks), answers.iter().sum());
+    }
+
+    #[test]
+    fn part2_examples() {
+        let equations = vec![
+            "1 + 2 * 3 + 4 * 5 + 6",
+            "1 + (2 * 3) + (4 * (5 + 6))",
+            "2 * 3 + (4 * 5)",
+            "5 + (8 * 3 + 9 + 3 * 4 * 3)",
+            "5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4))",
+            "((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2",
+        ];
+
+        let answers = vec![
+            231, 51, 46, 1445, 669060, 23340
+        ];
+
+        let token_stacks: Vec<Vec<Token>> = equations
+            .into_iter()
+            .map(|eq| {
+                let token_iter: TokensFromEnd = eq.into();
+                token_iter.collect()
+            })
+            .collect();
+
+        assert_eq!(part2(token_stacks), answers.iter().sum());
     }
 }
