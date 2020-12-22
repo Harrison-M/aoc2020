@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use regex::Regex;
 use std::{collections::{HashSet, HashMap}, env, fs, cell::RefCell, rc::Rc};
 
@@ -109,6 +110,44 @@ fn part1(rules: &RuleTable, cache: Rc<RefCell<RulePossibilities>>, messages: &Ve
         .count()
 }
 
+fn part2(rules: &RuleTable, cache: Rc<RefCell<RulePossibilities>>, messages: &Vec<&str>) -> usize {
+    let group42 = find_possibilities(42, rules, Rc::clone(&cache));
+    let min_len_42 = group42.iter().map(|s| s.len()).min().unwrap();
+    let group31 = find_possibilities(31, rules, cache);
+    let min_len_31 = group31.iter().map(|s| s.len()).min().unwrap();
+
+    let group42_expr = group42.iter().join("|");
+    let group31_expr = group31.iter().join("|");
+
+    let mut compiled_re_cache: HashMap<usize, Regex> = HashMap::new();
+
+    let validate = move |s: &&&str| {
+        let mut n = 1;
+        while (n + 1) * min_len_42 + n * min_len_31 <= s.len() {
+            let re = compiled_re_cache
+                .entry(n)
+                .or_insert_with(||
+                    Regex::new( // Finds n+1 rule 42 matches and n rule 31 matches
+                        &format!(
+                            "^({}){{{},}}({}){{{}}}$",
+                            group42_expr,
+                            n + 1,
+                            group31_expr,
+                            n
+                        )
+                    ).unwrap()
+                );
+            if re.is_match(s) {
+                return true;
+            }
+            n += 1
+        }
+        false
+    };
+
+    messages.iter().filter(validate).count()
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let filename = &args[1];
@@ -116,10 +155,11 @@ fn main() {
     let contents = fs::read_to_string(filename).expect("Error opening file");
     let mut sections = contents.split("\n\n");
     let rules = build_rule_table(sections.next().unwrap());
-    let cache: RulePossibilities = HashMap::new();
+    let cache: Rc<RefCell<RulePossibilities>> = Rc::new(RefCell::new(HashMap::new()));
     let messages: Vec<&str> = sections.next().unwrap().lines().collect();
 
-    println!("Part 1: {}", part1(&rules, Rc::new(RefCell::new(cache)), &messages));
+    println!("Part 1: {}", part1(&rules, Rc::clone(&cache), &messages));
+    println!("Part 2: {}", part2(&rules, cache, &messages));
 }
 
 #[cfg(test)]
@@ -134,6 +174,17 @@ mod test {
         let cache: Rc<RefCell<RulePossibilities>> = Rc::new(RefCell::new(HashMap::new()));
         let messages: Vec<&str> = sections.next().unwrap().lines().collect();
 
-        assert_eq!(part1(&rules, Rc::clone(&cache), &messages), 2);
+        assert_eq!(part1(&rules, cache, &messages), 2);
+    }
+
+    #[test]
+    fn part2_example() {
+        let sample = include_str!("sample2");
+        let mut sections = sample.split("\n\n");
+        let rules = build_rule_table(sections.next().unwrap());
+        let cache: Rc<RefCell<RulePossibilities>> = Rc::new(RefCell::new(HashMap::new()));
+        let messages: Vec<&str> = sections.next().unwrap().lines().collect();
+
+        assert_eq!(part2(&rules, cache, &messages), 12);
     }
 }
