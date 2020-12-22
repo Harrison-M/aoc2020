@@ -14,6 +14,7 @@ use Rule::*;
 type RulePossibilities = HashMap<u8, HashSet<String>>;
 type RuleTable<'a> = HashMap<u8, Rule<'a>>;
 
+/// Parse rule set
 fn build_rule_table<'a>(rules: &'a str) -> RuleTable<'a> {
     let rule_re = Regex::new(RULE_RE_STR).unwrap();
     rules
@@ -42,6 +43,7 @@ fn build_rule_table<'a>(rules: &'a str) -> RuleTable<'a> {
         }).collect()
 }
 
+/// From a slice of possibility sets, find every possible string
 fn combine_possibilities(sets: &[HashSet<String>]) -> HashSet<String>{
     match sets.split_first() {
         Some((set, &[])) => set.clone(),
@@ -59,6 +61,7 @@ fn combine_possibilities(sets: &[HashSet<String>]) -> HashSet<String>{
     }
 }
 
+/// Find the possible strings that will result from a given rule and store it in the cache
 fn find_possibilities(idx: u8, rules: &RuleTable, cache: Rc<RefCell<RulePossibilities>>)
     -> HashSet<String> {
         let borrowed_cache = cache.borrow();
@@ -95,7 +98,7 @@ fn find_possibilities(idx: u8, rules: &RuleTable, cache: Rc<RefCell<RulePossibil
                         borrowed_cache.insert(idx, set.clone());
                         drop(borrowed_cache);
                     }
-                    
+
                     set
                 }
             }
