@@ -1,71 +1,32 @@
-use std::{collections::VecDeque, env, fs};
+mod basic_game;
+mod game;
+mod parse_deck;
+mod recursive_game;
 
-struct CombatGame {
-    player1: VecDeque<u8>,
-    player2: VecDeque<u8>,
-}
+use basic_game::BasicGame;
+use game::CombatGame;
+use recursive_game::RecursiveGame;
+use std::{env, fs};
 
-impl From<&str> for CombatGame {
-    fn from(initial_state: &str) -> Self {
-        let mut player_iter = initial_state.split("\n\n");
-        let player1 = player_iter
-            .next()
-            .unwrap()
-            .lines()
-            .skip(1)
-            .map(|card| card.parse().unwrap())
-            .collect();
-
-        let player2 = player_iter
-            .next()
-            .unwrap()
-            .lines()
-            .skip(1)
-            .map(|card| card.parse().unwrap())
-            .collect();
-
-        Self { player1, player2 }
-    }
-}
-
-impl CombatGame {
-    fn turn(&mut self) -> bool {
-        if self.player1.is_empty() || self.player2.is_empty() {
-            false
-        } else {
-            let p1_card = self.player1.pop_front().unwrap();
-            let p2_card = self.player2.pop_front().unwrap();
-            if p1_card > p2_card {
-                self.player1.push_back(p1_card);
-                self.player1.push_back(p2_card);
-            } else {
-                self.player2.push_back(p2_card);
-                self.player2.push_back(p1_card);
-            }
-            true
-        }
-    }
-}
-
-fn part1(initial_state: &str) -> usize {
-    let mut game: CombatGame = initial_state.into();
-    loop {
-        if !game.turn() {
-            break;
-        }
-    };
-    let winner = if game.player1.is_empty() {
-        game.player2
-    } else {
-        game.player1
-    };
-
-    winner
+fn play_and_score<T: CombatGame>(mut game: T) -> usize {
+    let winner = game.play_until_win();
+    let winning_deck = game.get_deck(winner);
+    winning_deck
         .iter()
         .rev()
         .enumerate()
         .map(|(i, &card)| (i + 1) * (card as usize))
         .sum()
+}
+
+fn part1(initial_state: &str) -> usize {
+    let game: BasicGame = initial_state.into();
+    play_and_score(game)
+}
+
+fn part2(initial_state: &str) -> usize {
+    let game: RecursiveGame = initial_state.into();
+    play_and_score(game)
 }
 
 fn main() {
@@ -74,15 +35,22 @@ fn main() {
 
     let contents = fs::read_to_string(filename).expect("Error opening file");
     println!("Part 1: {}", part1(&contents));
+    println!("Part 2: {}", part2(&contents));
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
 
+    const SAMPLE: &str = include_str!("sample");
+
     #[test]
     fn part1_example() {
-        let sample = include_str!("sample");
-        assert_eq!(part1(sample), 306);
+        assert_eq!(part1(SAMPLE), 306);
+    }
+
+    #[test]
+    fn part2_example() {
+        assert_eq!(part2(SAMPLE), 291);
     }
 }
