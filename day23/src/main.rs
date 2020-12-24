@@ -1,25 +1,28 @@
-use std::{cell::RefCell, collections::{HashSet, BTreeMap}, env, mem, rc::Rc, fmt::Display};
+use std::{cell::RefCell, collections::{HashSet, HashMap}, env, mem, rc::Rc, fmt::Display, iter::FromIterator};
 
+/// Represents a single cup, linked to the next cup in the circle
 struct Cup {
-    label: u8,
+    label: usize,
     next_cup: Option<Rc<RefCell<Cup>>>,
 }
 
+/// Represents a circle of cups
 struct CupGame {
-    cups: BTreeMap<u8, Rc<RefCell<Cup>>>,
-    position: u8,
+    count: usize,
+    cups: HashMap<usize, Rc<RefCell<Cup>>>,
+    position: usize,
 }
 
-impl From<&str> for CupGame {
-    fn from(initial_circle: &str) -> Self {
-        let cups: Vec<_> = initial_circle
-            .bytes()
-            .map(|ascii|
+impl FromIterator<usize> for CupGame {
+    fn from_iter<T: IntoIterator<Item = usize>>(iter: T) -> Self {
+        let cups: Vec<_> = iter
+            .into_iter()
+            .map(|label|
                 Rc::new(
                     RefCell::new(
                         Cup {
-                            label: ascii - 48, // numerals start at ascii 48
-                            next_cup: None,
+                            label,
+                            next_cup: None
                         }
                     )
                 )
@@ -37,6 +40,7 @@ impl From<&str> for CupGame {
         let position = cups[0].borrow().label;
 
         Self {
+            count,
             cups: cups.iter()
                 .map(|cup| (cup.borrow().label, Rc::clone(cup)))
                 .collect(),
@@ -45,6 +49,16 @@ impl From<&str> for CupGame {
     }
 }
 
+impl From<&str> for CupGame {
+    fn from(initial_circle: &str) -> Self {
+        initial_circle
+            .bytes()
+            .map(|ascii| (ascii - 48) as usize) // numerals start at ascii 48
+            .collect()
+    }
+}
+
+/// An iterator that continues indefinitely clockwise around a cup cirle
 struct CupIterator {
     current: Option<Rc<RefCell<Cup>>>
 }
@@ -65,6 +79,7 @@ impl Iterator for CupIterator {
 }
 
 impl CupGame {
+    /// Get an iterator starting from the current position
     fn iter(&self) -> CupIterator {
         CupIterator {
             current: self.cups
@@ -73,6 +88,7 @@ impl CupGame {
         }
     }
 
+    /// Play one step of the game, in-place
     fn step(&mut self) {
         let mut picked_up: Vec<_> = self.iter()
             .skip(1)
@@ -86,19 +102,22 @@ impl CupGame {
             .borrow_mut()
             .next_cup = new_next;
 
-        let removed_labels: HashSet<u8> = picked_up
+        let removed_labels: HashSet<usize> = picked_up
             .iter()
             .map(|c| c.borrow().label)
             .collect();
 
-        let destination_label = self.cups
-            .keys()
-            .rev()
-            .cycle()
-            .skip_while(|&&i| i != self.position)
-            .skip(1)
-            .find(|i| !removed_labels.contains(i))
-            .unwrap();
+        let mut destination_label = self.position - 1;
+
+        loop {
+            if destination_label == 0 {
+                destination_label = self.count;
+            }
+            if !removed_labels.contains(&destination_label) {
+                break;
+            }
+            destination_label -= 1;
+        };
 
         let destination = self.cups
             .get(&destination_label)
@@ -148,11 +167,38 @@ fn part1(input: &str, steps: usize) -> String {
     game.to_string()
 }
 
+fn part2(input: &str) -> usize {
+    let initial_cups: Vec<_> = input
+        .bytes()
+        .map(|ascii| (ascii - 48) as usize) // numerals start at ascii 48
+        .collect();
+
+    let next = initial_cups.iter().max().unwrap() + 1;
+
+    let mut game: CupGame = initial_cups
+        .into_iter()
+        .chain(next..=1000000)
+        .collect();
+
+    // Maybe there's a more clever way to do this, but brute-force works
+    for i in 0..10000000 {
+        if i % 1000000 == 0 {
+            println!("Reached step {}", i); }
+        game.step();
+    }
+
+    let one = game.cups.get(&1).unwrap().borrow();
+    let second = one.next_cup.as_ref().unwrap().borrow();
+    let third = second.next_cup.as_ref().unwrap().borrow();
+    second.label * third.label
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     let input = &args[1];
     let steps = args[2].parse().unwrap();
     println!("Part 1: {}", part1(input, steps));
+    println!("Part 2: {}", part2(input));
 }
 
 #[cfg(test)]
@@ -162,5 +208,10 @@ mod test {
     #[test]
     fn part1_example() {
         assert_eq!(part1("389125467", 100), "67384529");
+    }
+
+    #[test]
+    fn part2_example() {
+        assert_eq!(part2("389125467"), 149245887792);
     }
 }
