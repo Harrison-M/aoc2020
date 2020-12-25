@@ -148,6 +148,14 @@ name = "day23"
 version = "0.1.0"
 
 [[package]]
+name = "day24"
+version = "0.1.0"
+dependencies = [
+ "point_2d",
+ "regex",
+]
+
+[[package]]
 name = "either"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
