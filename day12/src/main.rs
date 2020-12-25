@@ -1,39 +1,17 @@
-use std::{env, fs, ops::{Add, AddAssign, Mul}};
+use point_2d::Point2D;
+use std::{env, fs};
 
 enum RotationDir { LEFT, RIGHT }
 
 /// 2D coordinates
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-struct Position(isize, isize);
+type Position = Point2D<isize>;
 
 const CW_FACINGS: &[Position] = &[
-    Position(1, 0),
-    Position(0, -1),
-    Position(-1, 0),
-    Position(0, 1)
+    Point2D(1, 0),
+    Point2D(0, -1),
+    Point2D(-1, 0),
+    Point2D(0, 1)
 ];
-
-impl Add for Position {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        Self(self.0 + rhs.0, self.1 + rhs.1)
-    }
-}
-
-impl AddAssign for Position {
-    fn add_assign(&mut self, rhs: Self) {
-        *self = Self(self.0 + rhs.0, self.1 + rhs.1)
-    }
-}
-
-impl Mul<isize> for Position {
-    type Output = Position;
-
-    fn mul(self, rhs: isize) -> Self::Output {
-        Self(self.0 * rhs, self.1 * rhs)
-    }
-}
 
 /// A representation of a moving ferry
 struct MovingFerry {
@@ -44,8 +22,8 @@ struct MovingFerry {
 impl MovingFerry {
     fn new() -> Self {
         Self {
-            facing: Position(1, 0),
-            position: Position(0, 0),
+            facing: Point2D(1, 0),
+            position: Point2D(0, 0),
         }
     }
 
@@ -70,10 +48,10 @@ impl MovingFerry {
         let (action, value_str) = instruction.split_at(1);
         let value: isize = value_str.parse().unwrap();
         match action {
-            "N" => self.position += Position(0, 1) * value,
-            "S" => self.position += Position(0, -1) * value,
-            "E" => self.position += Position(1, 0) * value,
-            "W" => self.position += Position(-1, 0) * value,
+            "N" => self.position += Point2D(0, 1) * value,
+            "S" => self.position += Point2D(0, -1) * value,
+            "E" => self.position += Point2D(1, 0) * value,
+            "W" => self.position += Point2D(-1, 0) * value,
             "L" => self.rotate(RotationDir::LEFT, value),
             "R" => self.rotate(RotationDir::RIGHT, value),
             "F" => self.position += self.facing * value,
@@ -90,8 +68,8 @@ struct WaypointFerry {
 impl WaypointFerry {
     fn new() -> Self {
         Self {
-            position: Position(0, 0),
-            waypoint: Position(10, 1),
+            position: Point2D(0, 0),
+            waypoint: Point2D(10, 1),
         }
     }
 
@@ -99,10 +77,10 @@ impl WaypointFerry {
     fn rotate(&mut self, direction: RotationDir, degrees: isize) {
         let facing_skip = degrees / 90;
         for _ in 0..facing_skip {
-            let Position(x, y) = self.waypoint;
+            let Point2D(x, y) = self.waypoint;
             match direction {
-                RotationDir::LEFT => self.waypoint = Position(-1 * y, x),
-                RotationDir::RIGHT => self.waypoint = Position(y, -1 * x),
+                RotationDir::LEFT => self.waypoint = Point2D(-1 * y, x),
+                RotationDir::RIGHT => self.waypoint = Point2D(y, -1 * x),
             }
         }
     }
@@ -112,10 +90,10 @@ impl WaypointFerry {
         let (action, value_str) = instruction.split_at(1);
         let value: isize = value_str.parse().unwrap();
         match action {
-            "N" => self.waypoint += Position(0, 1) * value,
-            "S" => self.waypoint += Position(0, -1) * value,
-            "E" => self.waypoint += Position(1, 0) * value,
-            "W" => self.waypoint += Position(-1, 0) * value,
+            "N" => self.waypoint += Point2D(0, 1) * value,
+            "S" => self.waypoint += Point2D(0, -1) * value,
+            "E" => self.waypoint += Point2D(1, 0) * value,
+            "W" => self.waypoint += Point2D(-1, 0) * value,
             "L" => self.rotate(RotationDir::LEFT, value),
             "R" => self.rotate(RotationDir::RIGHT, value),
             "F" => self.position += self.waypoint * value,

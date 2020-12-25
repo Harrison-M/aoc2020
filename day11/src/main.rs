@@ -1,25 +1,8 @@
 use itertools::Itertools;
+use point_2d::Point2D;
 use std::{env, fs, collections::{HashMap, HashSet}};
 
-#[derive(Copy, Clone, Eq, Hash, PartialEq)]
-struct Seat(isize, isize);
-
-impl Seat {
-    /// List all possible adjacent seat locations. May return out of bounds seats.
-    fn adjacent_seats(&self) -> Vec<Seat> {
-        let &Seat(x, y) = self;
-        vec![
-            Seat(x - 1, y - 1),
-            Seat(x - 1, y),
-            Seat(x - 1, y + 1),
-            Seat(x, y - 1),
-            Seat(x, y + 1),
-            Seat(x + 1, y - 1),
-            Seat(x + 1, y),
-            Seat(x + 1, y + 1),
-        ]
-    }
-}
+type Seat = Point2D<isize>;
 
 /// A set of seats, with a map to easily find seats adjacent to another
 struct Ferry {
@@ -42,7 +25,7 @@ impl Ferry {
                     .char_indices()
                     .filter_map(move |(x, c)|
                         if c == 'L' {
-                            Some(Seat(x as isize, y as isize))
+                            Some(Point2D(x as isize, y as isize))
                         } else {
                             None
                         })
@@ -53,7 +36,7 @@ impl Ferry {
             .map(|&seat|
                 (seat,
                  seat
-                     .adjacent_seats()
+                     .adjacent_points()
                      .into_iter()
                      .filter(|adj_seat| seats.contains(adj_seat))
                      .collect()
@@ -64,7 +47,7 @@ impl Ferry {
             seats
                 .iter()
                 .map(|&seat| {
-                    let Seat(x, y) = seat;
+                    let Point2D(x, y) = seat;
                     let dir_range = -1isize..=1isize;
                     (seat,
                     dir_range
@@ -78,7 +61,7 @@ impl Ferry {
                             let mut check_x = x + x_dir;
                             let mut check_y = y + y_dir;
                             loop {
-                                let viewed_seat = Seat(check_x, check_y);
+                                let viewed_seat = Point2D(check_x, check_y);
                                 if check_x < 0 ||
                                    check_x >= width ||
                                    check_y < 0 ||
